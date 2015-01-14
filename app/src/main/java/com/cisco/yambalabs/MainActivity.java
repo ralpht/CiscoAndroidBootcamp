@@ -1,49 +1,64 @@
 package com.cisco.yambalabs;
 
-import android.app.Activity;
+import android.app.ListActivity;
+import android.app.LoaderManager;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.Loader;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.text.format.DateUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.SimpleCursorAdapter;
+import android.widget.TextView;
 
 
-public class MainActivity extends Activity implements View.OnClickListener {
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+public class MainActivity extends ListActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+    private static final int LOADER_ID = 1001;
 
-        findViewById(R.id.main_start_service).setOnClickListener(this);
-        findViewById(R.id.main_stop_service).setOnClickListener(this);
-        findViewById(R.id.main_start_iservice).setOnClickListener(this);
-        findViewById(R.id.main_stop_iservice).setOnClickListener(this);
+    private SimpleCursorAdapter mAdapter;
+
+    private class YambaBinder implements SimpleCursorAdapter.ViewBinder {
+        @Override
+        public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
+            if (view.getId() == R.id.status_timestamp) {
+                long ts = cursor.getLong(columnIndex);
+                CharSequence tsValue = DateUtils.getRelativeTimeSpanString(ts);
+                TextView tv = (TextView) view;
+
+                tv.setText(tsValue);
+
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 
     @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.main_start_service:
-                Intent startDemo = new Intent(this, DemoService.class);
-                startDemo.putExtra(DemoService.SPECIAL_DEMO_VALUE,
-                        "Caller id " + this.toString());
-                startService(startDemo);
-                break;
-            case R.id.main_stop_service:
-                Intent stopDemo = new Intent(this, DemoService.class);
-                stopService(stopDemo);
-                break;
-            case R.id.main_start_iservice:
-                Intent startYamba = new Intent(this, YambaService.class);
-                startService(startYamba);
-                break;
-            case R.id.main_stop_iservice:
-                Intent stopYamba = new Intent(this, YambaService.class);
-                stopService(stopYamba);
-                break;
-            default:
-                // no default case
-        }
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        mAdapter = new SimpleCursorAdapter(
+                this, R.layout.list_item_status, null,
+                new String [] {
+                        YambaContract.Status.Column.MESSAGE,
+                        YambaContract.Status.Column.USER,
+                        YambaContract.Status.Column.TIMESTAMP
+                },
+                new int[] {
+                        R.id.status_message,
+                        R.id.status_user,
+                        R.id.status_timestamp
+                },
+                SimpleCursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER);
+
+        mAdapter.setViewBinder(new YambaBinder());
+
+        setListAdapter(mAdapter);
+        getLoaderManager().initLoader(LOADER_ID, null, this);
     }
 
     @Override
@@ -65,5 +80,32 @@ public class MainActivity extends Activity implements View.OnClickListener {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private static final String[] PROJ = {
+            YambaContract.Status.Column.ID,
+            YambaContract.Status.Column.USER,
+            YambaContract.Status.Column.TIMESTAMP,
+            YambaContract.Status.Column.MESSAGE
+    };
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        return new CursorLoader(
+                this,
+                YambaContract.Status.URI,
+                PROJ,
+                null, null,
+                YambaContract.Status.Column.TIMESTAMP + " desc");
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        mAdapter.swapCursor(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        mAdapter.swapCursor(null);
     }
 }
