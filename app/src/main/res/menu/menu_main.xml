@@ -3,7 +3,12 @@
     tools:context=".MainActivity">
     <item
         android:id="@+id/main_post"
-        android:title="@string/action_settings"
+        android:title="Post"
         android:icon="@android:drawable/ic_menu_share"
+        android:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/main_refresh"
+        android:title="Refresh"
+        android:icon="@android:drawable/ic_menu_rotate"
         android:showAsAction="ifRoom" />
 </menu>

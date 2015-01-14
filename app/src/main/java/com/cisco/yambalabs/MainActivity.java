@@ -59,6 +59,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
             case R.id.main_post:
                 startActivity(new Intent(this, PostActivity.class));
                 return true;
+            case R.id.main_refresh:
+                startService(new Intent(this, YambaService.class));
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }

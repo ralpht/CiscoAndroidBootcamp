@@ -22,6 +22,10 @@
 
         <service android:name=".DemoService" />
         <service android:name=".YambaService" />
+
+        <provider
+            android:authorities="com.cisco.yambalabs"
+            android:name=".YambaProvider" />
     </application>
 
 </manifest>
