@@ -72,11 +72,15 @@ public class YambaService extends IntentService {
                 new String[] { YambaContract.Status.Column.MAX_ID },
                 null, null, null);
 
-        if (c != null && c.moveToFirst()) {
-            max = c.getLong(0);
-            c.close();
+        try {
+            if (c != null && c.moveToFirst()) {
+                max = c.getLong(0);
+            }
+        } finally {
+            if (c != null) {
+                c.close();
+            }
         }
-
         return max;
     }
 
