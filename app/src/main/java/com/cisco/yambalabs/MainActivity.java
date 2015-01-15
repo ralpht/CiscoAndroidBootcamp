@@ -1,64 +1,123 @@
 package com.cisco.yambalabs;
 
-import android.app.ListActivity;
-import android.app.LoaderManager;
-import android.content.CursorLoader;
+import android.app.Activity;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
-import android.content.Loader;
-import android.database.Cursor;
+import android.content.IntentFilter;
+import android.content.res.Configuration;
 import android.os.Bundle;
-import android.text.format.DateUtils;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.SimpleCursorAdapter;
-import android.widget.TextView;
+import android.widget.Toast;
 
 
-public class MainActivity extends ListActivity implements LoaderManager.LoaderCallbacks<Cursor> {
-    private static final int LOADER_ID = 1001;
+public class MainActivity extends Activity implements YambaListFragment.OnStatusSelectedListener {
+    @Override
+    public void statusSelected(long id) {
+        mId = id;
+        mDetailsFragment.displayStatus(id);
 
-    private SimpleCursorAdapter mAdapter;
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            FragmentManager fm = getFragmentManager();
+            FragmentTransaction ft = fm.beginTransaction();
 
-    private class YambaBinder implements SimpleCursorAdapter.ViewBinder {
-        @Override
-        public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
-            if (view.getId() == R.id.status_timestamp) {
-                long ts = cursor.getLong(columnIndex);
-                CharSequence tsValue = DateUtils.getRelativeTimeSpanString(ts);
-                TextView tv = (TextView) view;
+            ft.show(mDetailsFragment);
+            ft.hide(mListFragment);
+            ft.addToBackStack("Hide Details");
+            ft.commit();
 
-                tv.setText(tsValue);
-
-                return true;
-            } else {
-                return false;
-            }
+            getActionBar().setDisplayHomeAsUpEnabled(true);
         }
     }
+
+    private class RefreshReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Toast.makeText(context, "Yamba Post Refresh Complete", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public static final String REFRESH_FILTER = "com.cisco.yambalabs.REFRESH_FILTER";
+    private static final String SHOW_LIST = "SHOW_LIST";
+    private IntentFilter mFilter;
+    private RefreshReceiver mReceiver;
+    private long mId;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(mReceiver, mFilter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(mReceiver);
+    }
+
+    private YambaListFragment mListFragment;
+    private DetailsFragment mDetailsFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        mAdapter = new SimpleCursorAdapter(
-                this, R.layout.list_item_status, null,
-                new String [] {
-                        YambaContract.Status.Column.MESSAGE,
-                        YambaContract.Status.Column.USER,
-                        YambaContract.Status.Column.TIMESTAMP
-                },
-                new int[] {
-                        R.id.status_message,
-                        R.id.status_user,
-                        R.id.status_timestamp
-                },
-                SimpleCursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER);
+        mFilter = new IntentFilter(REFRESH_FILTER);
+        mReceiver = new RefreshReceiver();
 
-        mAdapter.setViewBinder(new YambaBinder());
+        Configuration config = getResources().getConfiguration();
+        getActionBar().setHomeButtonEnabled(true);
 
-        setListAdapter(mAdapter);
-        getLoaderManager().initLoader(LOADER_ID, null, this);
+        if (savedInstanceState == null) {
+            FragmentManager fm = getFragmentManager();
+            FragmentTransaction ft = fm.beginTransaction();
+
+            mListFragment = new YambaListFragment();
+            mDetailsFragment = new DetailsFragment();
+
+            ft.add(
+                    R.id.main_list_fragment, mListFragment,
+                    YambaListFragment.class.getSimpleName());
+
+            ft.add(R.id.main_detail_fragment, mDetailsFragment,
+                    DetailsFragment.class.getSimpleName());
+
+            ft.commit();
+        } else {
+            FragmentManager fm = getFragmentManager();
+
+            mListFragment = (YambaListFragment) fm.findFragmentByTag(
+                    YambaListFragment.class.getSimpleName());
+
+            mDetailsFragment = (DetailsFragment) fm.findFragmentByTag(
+                    DetailsFragment.class.getSimpleName());
+
+            if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                FragmentTransaction ft = fm.beginTransaction();
+
+                if (savedInstanceState.containsKey(SHOW_LIST)
+                        && savedInstanceState.getLong(SHOW_LIST) > 0) {
+                    ft.hide(mListFragment);
+                } else {
+                    ft.hide(mDetailsFragment);
+                }
+
+                ft.commit();
+            }
+
+        }
+
+        mListFragment.setOnStatusSelectedListener(this);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putLong(SHOW_LIST, mId);
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -71,6 +130,9 @@ public class MainActivity extends ListActivity implements LoaderManager.LoaderCa
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case android.R.id.home:
+                onBackPressed();
+                return true;
             case R.id.main_post:
                 startActivity(new Intent(this, PostActivity.class));
                 return true;
@@ -82,30 +144,20 @@ public class MainActivity extends ListActivity implements LoaderManager.LoaderCa
         }
     }
 
-    private static final String[] PROJ = {
-            YambaContract.Status.Column.ID,
-            YambaContract.Status.Column.USER,
-            YambaContract.Status.Column.TIMESTAMP,
-            YambaContract.Status.Column.MESSAGE
-    };
-
     @Override
-    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        return new CursorLoader(
-                this,
-                YambaContract.Status.URI,
-                PROJ,
-                null, null,
-                YambaContract.Status.Column.TIMESTAMP + " desc");
-    }
+    public void onBackPressed() {
+        FragmentManager fm = getFragmentManager();
+        Configuration config = getResources().getConfiguration();
 
-    @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        mAdapter.swapCursor(data);
-    }
+        if (fm.getBackStackEntryCount() > 0) {
+            if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                finish();
+                return;
+            }
 
-    @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
-        mAdapter.swapCursor(null);
+            getActionBar().setDisplayHomeAsUpEnabled(false);
+        }
+
+        super.onBackPressed();
     }
 }

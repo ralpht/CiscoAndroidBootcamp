@@ -58,6 +58,9 @@ public class YambaService extends IntentService {
                     YambaContract.Status.URI,
                     valueList.toArray(new ContentValues[valueList.size()]));
 
+            Intent refreshIntent = new Intent(MainActivity.REFRESH_FILTER);
+            sendBroadcast(refreshIntent);
+
             Log.d(TAG, "Inserted " + count + " item(s)");
         } catch (YambaClientException e) {
             e.printStackTrace();
