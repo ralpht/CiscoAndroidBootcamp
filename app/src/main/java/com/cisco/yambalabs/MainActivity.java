@@ -8,13 +8,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 
 
-public class MainActivity extends Activity implements YambaListFragment.OnStatusSelectedListener {
+public class MainActivity extends Activity implements View.OnClickListener,
+        YambaListFragment.OnStatusSelectedListener {
     @Override
     public void statusSelected(long id) {
         mId = id;
@@ -68,6 +71,10 @@ public class MainActivity extends Activity implements YambaListFragment.OnStatus
 
         mFilter = new IntentFilter(REFRESH_FILTER);
         mReceiver = new RefreshReceiver();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            findViewById(R.id.main_post).setOnClickListener(this);
+        }
 
         Configuration config = getResources().getConfiguration();
         getActionBar().setHomeButtonEnabled(true);
@@ -124,6 +131,7 @@ public class MainActivity extends Activity implements YambaListFragment.OnStatus
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+
         return true;
     }
 
@@ -159,5 +167,10 @@ public class MainActivity extends Activity implements YambaListFragment.OnStatus
         }
 
         super.onBackPressed();
+    }
+
+    @Override
+    public void onClick(View v) {
+        startActivity(new Intent(this, PostActivity.class));
     }
 }

@@ -19,6 +19,6 @@ public class BootReceiver extends BroadcastReceiver {
         PendingIntent operation = PendingIntent.getService(
                 context, YAMBA_SERVICE_ID, yambaIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        am.setInexactRepeating(AlarmManager.RTC, 0, 10000, operation);
+        am.setInexactRepeating(AlarmManager.RTC, 0, 30000, operation);
     }
 }
