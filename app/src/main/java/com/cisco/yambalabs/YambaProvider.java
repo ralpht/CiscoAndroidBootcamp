@@ -97,10 +97,28 @@ public class YambaProvider extends ContentProvider {
 		switch (MATCHER.match(uri)) {
 		case STATUS_ITEM_TYPE:
 		case STATUS_DIR_TYPE:
-			return null;
+			break;
 		default:
 			throw new IllegalArgumentException("Unrecognized uri: " + uri);
 		}
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        long id = -1;
+
+        try {
+            id = db.insert(YambaContract.Status.TABLE, null, values);
+            getContext().getContentResolver().notifyChange(uri, null);
+        } finally {
+            if (db != null) {
+                db.close();
+            }
+        }
+
+        if (id != -1) {
+            return ContentUris.withAppendedId(uri, id);
+        } else {
+            return null;
+        }
 	}
 	
 	@Override

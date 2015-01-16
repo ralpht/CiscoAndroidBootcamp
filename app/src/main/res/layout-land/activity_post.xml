@@ -29,8 +29,8 @@
             android:layout_below="@+id/post_status_label"
             android:layout_alignParentRight="true"
             android:layout_marginRight="10dp"
-            android:textColor="@android:color/white"
-            tools:text="140" />
+            android:textColor="#00ff00"
+            android:text="140" />
 
         <Button
             android:id="@+id/post_button"
